@@ -1,0 +1,172 @@
+{%load static%}
+<html lang="en">
+  <head>
+    <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+
+    <title>Trainingsopkomst</title>
+    <style>
+        body {
+            background-color: rgb(255, 206, 121);
+        }
+        #main {
+            background-color: rgba(173, 215, 229, 0.3);
+            padding-bottom:20px;
+        }
+
+        .person {
+            padding: 10px;
+            margin-bottom:15px;
+        }
+
+        .progress {
+            height: 2rem;
+            position: relative;
+        }
+
+        
+        @media only screen and (min-width: 768px) {
+            #main {
+                width:50%;
+                margin:auto;
+            }
+        }
+
+        .streak {
+            width: 80px;
+            height: 50px;
+            position: absolute;
+            z-index: 1;
+            margin-left: 6px;
+        }
+
+        .streak img {
+            width: 25px;
+            height: 25px;
+            float: left;
+            margin-top: 2px;
+        }
+
+        .streak h4 {
+            color:white;
+            font-family: Arial, Helvetica, sans-serif;
+            font-size: 1.4rem;
+            width: 30px;
+            float: left;
+            margin-bottom: 0;
+            margin-top: 2px;
+        }
+    </style>
+  </head>
+  <body>
+    <div id="main" class="text-center">
+        <h1>Trainingsopkomst Heren 1 Hydrofiel</h1>
+    </div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script
+    src="https://code.jquery.com/jquery-3.3.1.min.js"
+    integrity="sha256-FgpCb/KJQlLNfOu91ta32o/NMZxltwRo8QtmkMRdAu8="
+    crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js" integrity="sha384-ApNbgh9B+Y1QKtv3Rn7W3mgPxhU9K/ScQsAP7hUibX39j7fakFPskvXusvfa0b4Q" crossorigin="anonymous"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js" integrity="sha384-JZR6Spejh4U02d8jOt6vLEHfe/JQGiRRSQQxSfFWpi1MquVdAyjUar5+76PVCmYl" crossorigin="anonymous"></script>
+    <script>
+        function getSortedKeys(obj) {
+            var keys = []; 
+            for(var key in obj) keys.push(key);
+            return keys.sort(function(a,b){return obj[b] - obj[a]});
+        }
+
+        $(document).ready(function() {
+            $.ajax({
+                type: "GET",
+                url: "{% static 'opkomst.csv' %}",
+                dataType: "text",
+                success: function(data) {processData(data);}
+            });
+        });
+
+        function processData(allText) {
+            var allTextLines = allText.split(/\r\n|\n/);
+            var headers = allTextLines[0].split(',');
+            var result = {};
+
+            for (var i=1; i<allTextLines.length; i++) {
+                var data = allTextLines[i].split(',');
+                result[data[0]] = data[1];
+            }
+
+            opkomst = result;
+
+            var streaks = {};
+            for (var i=1; i<allTextLines.length; i++) {
+                var data = allTextLines[i].split(',');
+                streaks[data[0]] = data[2];
+            }
+
+            var absentstreaks = {};
+            for (var i=1; i<allTextLines.length; i++) {
+                var data = allTextLines[i].split(',');
+                absentstreaks[data[0]] = data[3];
+            }
+
+            build(opkomst, streaks, absentstreaks);
+        }
+
+        function getProgressContent(name, percentage, cls, streak, absentstreak){
+            var personDiv = "<div class='person col-xs-12'>{content}</div>";
+            var streakDiv = "";
+            var absentDiv = "";
+
+            if(streak > 2) {
+                streakDiv = "<div class='streak'> \
+                                <h4>"+streak+"</h4> \
+                                <img src='{% static 'streak.png' %}'> \
+                            </div>";
+            }
+
+            if(absentstreak > 1){
+                absentDiv = "<div class='streak'> \
+                                <h4>"+absentstreak+"</h4> \
+                                <img src='{% static 'absent.png' %}'> \
+                            </div>";
+            }
+
+            var content = "<h2>" + name + "</h2>" +
+                          "<div class='progress'> \
+                          {streak} {absentstreak}\
+                          <div class='progress-bar "+cls+"' role='progressbar' aria-valuenow='"+percentage+"' \
+                          aria-valuemin='0' aria-valuemax='100' style='width:"+percentage+"%'> \
+                            "+percentage+"% \
+                          </div>";
+            
+            return personDiv.replace("{content}", content).replace("{streak}", streakDiv).replace("{absentstreak}",absentDiv);
+        }
+        
+        function build(opkomst, streaks, absentstreaks){
+            var sorted = getSortedKeys(opkomst);
+            for (i=0; i < sorted.length; i++){
+                name = sorted[i];
+                if(name != "") {
+                    var cls = "bg-danger";
+                    var op = Math.round(opkomst[name]*10)/10;
+                    if(op > 85){
+                        cls = "bg-success";
+                    } else if (op > 60){
+                        cls = "";
+                    }
+                    $("#main").append(getProgressContent(name, op, cls, streaks[name], absentstreaks[name]));
+                }
+            }
+        }
+
+    </script>
+
+</body>
+</html>
